@@ -1,4 +1,3 @@
-# Replace 'path_to_file' with the actual file path if the file is not in the working directory
 vinegar_data <- vinegar
 
 # Boxplot to visualize acidity differences between factory locations
@@ -141,35 +140,30 @@ plot(time_points, failure_density_values, type = 'l', xlab = 'Time (years)', yla
 
 #3 (b)
 
-
-library(survival)
-
-# Failures data
+# Failure and censoring data
 failures <- c(1, 0, 3, 4, 11, 8, 8, 15, 17, 10)
-
-# Censoring events data
 censoring <- c(0, 0, 2, 0, 0, 5, 3, 4, 2, 1)
 
-# Create a survival object
-surv_data <- Surv(time = failures, event = rep(1, length(failures)), type = "counting")
+# Calculate the total number of units (population)
+total_units <- 100
 
-# Fit survival model (Nelson-Aalen estimator)
-fit <- survfit(surv_data ~ 1)
+# Calculate the remaining units at risk (accounts for censoring)
+units_at_risk <- total_units - cumsum(censoring)
+
+# Calculate the survival probability at each time point
+survival_prob <- cumprod(1 - failures / units_at_risk)
+
+# Calculate the hazard function
+hazard <- failures / units_at_risk
+
+# Calculate the failure probability density function
+failure_density <- c(0, diff(failures) / units_at_risk[-length(units_at_risk)])
 
 # Plot the survival function S(t)
-plot(fit, xlab = 'Time (years)', ylab = 'Survival Probability', main = 'Survival Function S(t)')
-
-# Hazard function h(t)
-hazard_fit <- survfit(Surv(time = c(failures, failures + censoring), event = c(rep(1, length(failures)), rep(0, length(censoring)))) ~ 1)
+plot(failures, survival_prob, type = "s", xlab = "Time (years)", ylab = "Survival Probability", main = "Survival Function S(t)")
 
 # Plot the hazard function h(t)
-plot(hazard_fit, fun = "cumhaz", xlab = 'Time (years)', ylab = 'Hazard Rate', main = 'Hazard Function h(t)')
-
-# Failure probability density function f(t)
-failure_density_fit <- survfit(Surv(time = c(failures, failures + censoring), event = c(rep(1, length(failures)), rep(0, length(censoring)))) ~ 1)
+plot(failures, hazard, type = "s", xlab = "Time (years)", ylab = "Hazard Rate", main = "Hazard Function h(t)")
 
 # Plot the failure probability density function f(t)
-plot(failure_density_fit, fun = "density", xlab = 'Time (years)', ylab = 'Failure Density', main = 'Failure Probability Density Function f(t)')
-
-
-
+plot(failures, failure_density, type = "s", xlab = "Time (years)", ylab = "Failure Density", main = "Failure Probability Density Function f(t)")
