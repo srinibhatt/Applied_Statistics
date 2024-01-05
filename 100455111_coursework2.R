@@ -45,6 +45,17 @@ oneway.test(y ~ grp, var.equal = TRUE)
 
 #1(c)
 require(lawstat)
+
+shapiro.test(ph ~ Site, data= vinegar_data)
+anova_model <- aov(formula = pH ~ Site, data = vinegar_data)
+
+# Extracting residuals from the ANOVA model
+residuals <- residuals(anova_model)
+
+shapiro.test(residuals)
+# Normal Q-Q plot for residuals
+qqnorm(residuals)
+qqline(residuals)
 site = factor(vinegar_data$Site)
 
 acidityLevels = vinegar_data$pH
@@ -56,42 +67,56 @@ levene.test(acidityLevels,site)
 # Fit the ANOVA model
 anova_model <- aov(vinegar_data$pH ~ vinegar_data$Site, data = vinegar_data)
 print(anova_model)
+summary(anova_model)
 # Obtain residuals
 residuals <- residuals(anova_model)
 print(residuals)
 
 # Plot residuals against fitted values or group labels
-plot(fitted(anova_model), residuals, xlab = "Fitted Values", ylab = "Residuals", main = "Residuals vs. Fitted")
+plot(anova_model,which=1 )
 
 #1(d)
 posthoc <- TukeyHSD(anova_model)
 posthoc
 
+aov(formula = vinegar_data$pH ~ vinegar_data$Site, data = vinegar_data)
+
 #1(e)
-p_values <- c(0.4765222, 0.3632112, 0.9923747, 0.0916315, 0.9998934, 0.2519132, 0.0015038, 0.1723996, 0.0006834, 0.2118486)
-holm_corrected <- p.adjust(p_values, method = "holm")
+p_values < - posthoc$`vinegar_data$Site`[, "p adj"]
+print(p_values)
+holm_corrected <- p.adjust(posthoc$`vinegar_data$Site`[, "p adj"], method = "holm")
 holm_corrected
 
-
 # Apply Bonferroni correction
-bonferroni_corrected <- p.adjust(p_values, method = "bonferroni")
+bonferroni_corrected <- p.adjust(posthoc$`vinegar_data$Site`[, "p adj"], method = "bonferroni")
 
 # Display the corrected p-values
 bonferroni_corrected
 
+correction_results = data.frame(original_values  = p_values, Holm_correction = holm_corrected, bonferroni_corrected = bonferroni_corrected)
+
+print(correction_results)
+
+
+
 
 #2(a)
 
-
-
+print(VenomYield)
+summary(VenomYield)
 # Boxplot of Venom Yield by Body Class and Expression
 boxplot(`Yield (mg)` ~ `Body Class` * `Expression`, data = VenomYield,
         xlab = "Body Class and Expression", ylab = "Venom Yield (mg)",
         main = "Venom Yield Distribution by Body Class and Expression")
 
+interaction.plot(data = VenomYield,VenomYield$`Yield (mg)` ~ VenomYield$`Body Length (cm)`)
+# Load necessary libraries
+
+
+
 
 #2(b)
-
+printVenomYield
 # Assuming 'VenomYield' is your dataframe with columns 'Yield (mg)', 'Body Class', and 'Expression'
 model <- aov(`Yield (mg)` ~ `Body Class` * `Expression`, data = VenomYield)
 
@@ -108,6 +133,7 @@ summary(ancova_result)
 
 # 3 (a)
 
+library(survival)
 
 # Define the hazard function
 hazard <- function(t) {
@@ -140,30 +166,35 @@ plot(time_points, failure_density_values, type = 'l', xlab = 'Time (years)', yla
 
 #3 (b)
 
-# Failure and censoring data
-failures <- c(1, 0, 3, 4, 11, 8, 8, 15, 17, 10)
-censoring <- c(0, 0, 2, 0, 0, 5, 3, 4, 2, 1)
+# Given data
+time_intervals <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9) 
+ninint <- 100
+nlost <- c(1, 0, 3, 4, 11, 8, 8, 15, 17, 10)
+nevent <- c(0, 0, 2, 0, 0, 5, 3, 4, 2, 1)
 
-# Calculate the total number of units (population)
-total_units <- 100
+# Generating the life table
+my_table <- lifetab(time_intervals, ninint, nlost, nevent)
 
-# Calculate the remaining units at risk (accounts for censoring)
-units_at_risk <- total_units - cumsum(censoring)
+print(my_table)
 
-# Calculate the survival probability at each time point
-survival_prob <- cumprod(1 - failures / units_at_risk)
+# Extracting S, f, and h
+S <- my_table[, 5]
+f <- my_table[, 6]
+h <- my_table[, 7]
 
-# Calculate the hazard function
-hazard <- failures / units_at_risk
+# Adjusted time intervals
+t <- 0.5 + c(0:9)
 
-# Calculate the failure probability density function
-failure_density <- c(0, diff(failures) / units_at_risk[-length(units_at_risk)])
+# Setting up a single plot area to combine all plots
+par(mfrow = c(3, 1))  # 3 rows, 1 column
 
-# Plot the survival function S(t)
-plot(failures, survival_prob, type = "s", xlab = "Time (years)", ylab = "Survival Probability", main = "Survival Function S(t)")
+# Plotting all functions in one figure
+plot(t, S, type = 'l', col = 'blue', xlab = 'Time (years)', ylab = 'Survival Probability', main = 'Survival Function S(t)')
 
-# Plot the hazard function h(t)
-plot(failures, hazard, type = "s", xlab = "Time (years)", ylab = "Hazard Rate", main = "Hazard Function h(t)")
+plot(t, f, type = 'l', col = 'green', xlab = 'Time (years)', ylab = 'Failure Probability Density', main = 'Failure Density Function f(t)')
 
-# Plot the failure probability density function f(t)
-plot(failures, failure_density, type = "s", xlab = "Time (years)", ylab = "Failure Density", main = "Failure Probability Density Function f(t)")
+plot(t, h, type = 'l', col = 'red', xlab = 'Time (years)', ylab = 'Hazard Function', main = 'Hazard Function h(t)')
+
+
+#
+
