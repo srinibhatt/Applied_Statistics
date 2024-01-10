@@ -1,4 +1,52 @@
+#1(a)
 vinegar_data <- vinegar
+print(vinegar_data,n=1000)
+
+# Calculate median pH levels for each factory using aggregate
+median_pH <- aggregate(pH ~ Site, data = vinegar_data, FUN = median)
+
+print(median_pH)
+
+# Calculate IQR for pH levels by factory
+# Define a function to calculate IQR
+calculate_IQR <- function(x) {
+  Q1 <- quantile(x, 0.25)
+  Q3 <- quantile(x, 0.75)
+  IQR_value <- Q3 - Q1
+  return(IQR_value)
+}
+
+# Calculate IQR for pH levels by factory
+iqr_pH <- tapply(vinegar_data$pH, vinegar_data$Site, calculate_IQR)
+
+print(iqr_pH)
+
+# Calculate quartiles and IQR for each factory
+Q1 <- tapply(vinegar_data$pH, vinegar_data$Site, quantile, probs = 0.25)
+Q3 <- tapply(vinegar_data$pH, vinegar_data$Site, quantile, probs = 0.75)
+IQR <- Q3 - Q1
+
+# Identify potential outliers
+outliers <- lapply(1:length(unique(vinegar_data$Site)), function(i) {
+  site <- unique(vinegar_data$Site)[i]
+  lower_bound <- Q1[i] - 1.5 * IQR[i]
+  upper_bound <- Q3[i] + 1.5 * IQR[i]
+  outliers <- vinegar_data$pH[vinegar_data$Site == site & (vinegar_data$pH < lower_bound | vinegar_data$pH > upper_bound)]
+  data.frame(Site = rep(site, length(outliers)), pH = outliers)
+})
+
+outliers_df <- do.call(rbind, outliers)
+print(outliers_df)
+
+
+# Calculate overall minimum and maximum pH values
+overall_min_pH <- min(vinegar_data$pH)
+overall_max_pH <- max(vinegar_data$pH)
+
+# Print the overall pH range
+cat("Overall pH Range: ", overall_min_pH, "-", overall_max_pH)
+
+
 
 # Boxplot to visualize acidity differences between factory locations
 boxplot(vinegar_data$pH ~ vinegar_data$Site, data = vinegar_data, 
@@ -17,7 +65,23 @@ iqr_value <- q3 - q1
 iqr_values <- tapply(vinegar_data$pH, vinegar_data$Site,IQR)
 View(iqr_values)
 
-#1(c)
+
+#1(b)
+
+# Perform one-way ANOVA
+anova_result <- aov(pH ~ Site, data = vinegar_data)
+
+# Summarize ANOVA results
+summary(anova_result)
+
+pairwise_result <- pairwise.t.test(vinegar_data$pH, vinegar_data$Site, p.adj = "none")
+pairwise_result
+
+grp = factor(vinegar_data$Site)
+grp
+y = vinegar_data$pH
+drug.lm = lm(y ~ grp)
+
 posthoc <- TukeyHSD(anova_model)
 print(posthoc)
 
@@ -44,15 +108,22 @@ anova(drug.lm)
 oneway.test(y ~ grp, var.equal = TRUE)
 
 #1(c)
+
+
+#1(c)
 require(lawstat)
 
-shapiro.test(ph ~ Site, data= vinegar_data)
+
 anova_model <- aov(formula = pH ~ Site, data = vinegar_data)
 
 # Extracting residuals from the ANOVA model
 residuals <- residuals(anova_model)
 
 shapiro.test(residuals)
+
+par(mfrow = c(1, 2))
+
+plot(anova_model, which = 1)
 # Normal Q-Q plot for residuals
 qqnorm(residuals)
 qqline(residuals)
@@ -61,8 +132,7 @@ site = factor(vinegar_data$Site)
 acidityLevels = vinegar_data$pH
 
 levene.test(acidityLevels,site,location = "median")
-levene.test(acidityLevels,site,location = "mean")
-levene.test(acidityLevels,site)
+
 
 # Fit the ANOVA model
 anova_model <- aov(vinegar_data$pH ~ vinegar_data$Site, data = vinegar_data)
@@ -112,7 +182,30 @@ boxplot(`Yield (mg)` ~ `Body Class` * `Expression`, data = VenomYield,
 interaction.plot(data = VenomYield,VenomYield$`Yield (mg)` ~ VenomYield$`Body Length (cm)`)
 # Load necessary libraries
 
+# Load the data
+print(VenomYield,n=1000)
 
+unique_levels <- unique(VenomYield$`Body Class`)
+print(unique_levels)
+# Scatterplot of Body Length vs. Venom Yield, color-coded by Body Class
+plot(VenomYield$`Body Length (cm)`, VenomYield$`Yield (mg)`, 
+     col = ifelse(VenomYield$`Body Class` == "small", "red", "blue"),
+     xlab = "Body Length (cm)", ylab = "Venom Yield (mg)",
+     main = "Scatterplot of Body Length vs. Venom Yield (by Body Class)")
+
+# Create the legend based on the unique levels in 'Body Class'
+legend("topright", legend = unique_levels, col = c("red", "blue"), pch = 1)
+
+# Scatterplot of Body Length vs. Venom Yield, color-coded by Gene Expression
+plot(VenomYield$`Body Length (cm)`, VenomYield$`Yield (mg)`, col = ifelse(VenomYield$`Expression` == "low", "green", "orange"),
+     xlab = "Body Length (cm)", ylab = "Venom Yield (mg)",
+     main = "Scatterplot of Body Length vs. Venom Yield (by Gene Expression)")
+legend("topright", legend = unique_levels, col = c("green", "orange"), pch = 1)
+
+# Boxplot of Venom Yield by Body Class
+boxplot(VenomYield$`Yield (mg)` ~ VenomYield$`Body Class`,
+        xlab = "Body Class", ylab = "Venom Yield (mg)",
+        main = "Distribution of Venom Yield by Body Class")
 
 
 #2(b)
@@ -166,6 +259,7 @@ plot(time_points, failure_density_values, type = 'l', xlab = 'Time (years)', yla
 
 #3 (b)
 
+require(KMsurv)
 # Given data
 time_intervals <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9) 
 ninint <- 100
@@ -195,6 +289,4 @@ plot(t, f, type = 'l', col = 'green', xlab = 'Time (years)', ylab = 'Failure Pro
 
 plot(t, h, type = 'l', col = 'red', xlab = 'Time (years)', ylab = 'Hazard Function', main = 'Hazard Function h(t)')
 
-
-#
 
